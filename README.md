@@ -3,6 +3,7 @@ Show cases a bug with the RxJava library
 
 ##Information
 When using RxJava and OkHttp in conjunction, while a network call is being made by OkHttp, if the app is put into the background, the thread used to observe, if it is one of the threads that the Schedulers class manages, will be interrupted. This issue doesn't occur if a thread is manually specified by using ```Schedulers.from()```
+[The stracktrace can be found here.](./stacktrace.txt)
 
 ##Bug Reproduction Steps
 
