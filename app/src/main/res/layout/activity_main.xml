@@ -24,6 +24,12 @@
         android:text="Single Thread Executor" />
 
     <Button
+        android:id="@+id/connectableFlowable"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Connectable Flowable" />
+
+    <Button
         android:id="@+id/reset"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

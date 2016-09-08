@@ -20,10 +20,12 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int IO = 0;
     private static final int EXECUTOR = 1;
+    private static final int CONNECTABLE_FLOWABLE = 2;
     private static SuperModelController controller = new SuperModelController(new SuperModel());
     private CompositeDisposable disposables;
     private Button ioButton;
     private Button executorButton;
+    private Button connectableFlowableButton;
     private Button resetButton;
     private boolean loading;
     private int loadSource = -1;
@@ -40,8 +42,7 @@ public class MainActivity extends AppCompatActivity {
         ioButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                executorButton.setEnabled(false);
-                ioButton.setEnabled(false);
+                setButtonEnabled(false);
                 loadSource = IO;
                 subscribe(Schedulers.io());
             }
@@ -50,10 +51,18 @@ public class MainActivity extends AppCompatActivity {
         executorButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                executorButton.setEnabled(false);
-                ioButton.setEnabled(false);
+                setButtonEnabled(false);
                 loadSource = EXECUTOR;
                 subscribe(Schedulers.from(Executors.newSingleThreadExecutor()));
+            }
+        });
+        connectableFlowableButton = (Button) findViewById(R.id.connectableFlowable);
+        connectableFlowableButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setButtonEnabled(false);
+                loadSource = CONNECTABLE_FLOWABLE;
+                subscribeConnectableFlowable();
             }
         });
         resetButton = (Button) findViewById(R.id.reset);
@@ -65,6 +74,12 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void setButtonEnabled(boolean enabled) {
+        executorButton.setEnabled(enabled);
+        ioButton.setEnabled(enabled);
+        connectableFlowableButton.setEnabled(enabled);
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -73,6 +88,12 @@ public class MainActivity extends AppCompatActivity {
             switch (loadSource) {
                 case IO:
                     subscribe(Schedulers.io());
+                    break;
+                case EXECUTOR:
+                    subscribe(Schedulers.from(Executors.newSingleThreadExecutor()));
+                    break;
+                case CONNECTABLE_FLOWABLE:
+                    subscribeConnectableFlowable();
                     break;
                 default:
                     subscribe(Schedulers.from(Executors.newSingleThreadExecutor()));
@@ -95,6 +116,40 @@ public class MainActivity extends AppCompatActivity {
         outState.putInt("loadSource", loadSource);
     }
 
+    private void subscribeConnectableFlowable() {
+        loading = true;
+        disposables.add(controller.getConnectableFlowable()
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribeWith(new ResourceSubscriber<List<String>>() {
+                    @Override
+                    public void onNext(List<String> strings) {
+                        Toast.makeText(MainActivity.this, "Got some items.", Toast.LENGTH_SHORT).show();
+                        ioButton.setEnabled(true);
+                        executorButton.setEnabled(true);
+                        resetButton.callOnClick();
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        t.printStackTrace(System.err);
+                        if (t instanceof InterruptedIOException) {
+                            Toast.makeText(MainActivity.this, "Got an Interrupted Exception!", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(MainActivity.this, "Got an error!", Toast.LENGTH_SHORT).show();
+                        }
+                        ioButton.setEnabled(true);
+                        executorButton.setEnabled(true);
+                        resetButton.callOnClick();
+                    }
+
+                    @Override
+                    public void onComplete() {
+                        resetButton.callOnClick();
+                    }
+                }));
+    }
+
     private void subscribe(Scheduler scheduler) {
         loading = true;
         disposables.add(controller.getFlowable()
@@ -106,7 +161,7 @@ public class MainActivity extends AppCompatActivity {
                         Toast.makeText(MainActivity.this, "Got some items.", Toast.LENGTH_SHORT).show();
                         ioButton.setEnabled(true);
                         executorButton.setEnabled(true);
-
+                        resetButton.callOnClick();
                     }
 
                     @Override
